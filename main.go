@@ -1,5 +1,7 @@
 package main
-
-func hello()  {
-	fmt.Println("hello")
+import (
+	"fmt"
+)
+func Info()  {
+	fmt.Println("utool工具类,包含文件操作和ssh")
 }
