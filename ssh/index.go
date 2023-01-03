@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -27,10 +28,12 @@ func (c *Cli) Connect() (*Cli, error) {
 	config.Auth = []ssh.AuthMethod{ssh.Password(c.password)}
 	config.HostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error { return nil }
 	client, err := ssh.Dial("tcp", c.host, config)
+	sftp, err := sftp.NewClient(client)
 	if nil != err {
 		return c, err
 	}
 	c.client = client
+	c.sftpClient = sftp
 	return c, nil
 }
 
@@ -65,15 +68,24 @@ func Server(host string, user string, password string) Cli {
 	defer c.client.Close()
 	return cli
 }
-func (c Cli) UploadFile(localFile, remoteFileName string) {
-	if c.client == nil {
-		c.Connect();
+func (c *Cli) createDir(list []string){
+	cli,_:=c.Connect()
+	for _,dir:= range list {
+		cli.sftpClient.MkdirAll(dir)
 	}
-	file, _ := os.Open(localFile)
-	defer file.Close()
-	ftpFile, _ := c.sftpClient.Create(remoteFileName)
-	defer ftpFile.Close()
+}
+func (c *Cli) UploadFile(localFile, remoteFileName string) {
+	cli,_:=c.Connect()
 
-	fileByte, _ := ioutil.ReadAll(ftpFile)
+	file, _ := os.Open(localFile)
+
+	ftpFile, err := cli.sftpClient.Create(remoteFileName)
+	if nil != err {
+		fmt.Println(err)
+	}
+
+	fileByte, _ := ioutil.ReadAll(file)
 	ftpFile.Write(fileByte)
+	defer ftpFile.Close()
+	defer file.Close()
 }
