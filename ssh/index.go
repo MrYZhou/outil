@@ -1,8 +1,11 @@
 package ssh
 
 import (
+	"io/ioutil"
 	"net"
+	"os"
 
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -12,6 +15,7 @@ type Cli struct {
 	password   string
 	host       string
 	client     *ssh.Client
+	sftpClient *sftp.Client
 	LastResult string
 }
 
@@ -60,4 +64,16 @@ func Server(host string, user string, password string) Cli {
 
 	defer c.client.Close()
 	return cli
+}
+func (c Cli) UploadFile(localFile, remoteFileName string) {
+	if c.client == nil {
+		c.Connect();
+	}
+	file, _ := os.Open(localFile)
+	defer file.Close()
+	ftpFile, _ := c.sftpClient.Create(remoteFileName)
+	defer ftpFile.Close()
+
+	fileByte, _ := ioutil.ReadAll(ftpFile)
+	ftpFile.Write(fileByte)
 }
