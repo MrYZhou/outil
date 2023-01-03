@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"net"
-	"os"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -11,7 +10,7 @@ import (
 type Cli struct {
 	user       string
 	password   string
-	addr       string
+	host       string
 	client     *ssh.Client
 	LastResult string
 }
@@ -23,7 +22,7 @@ func (c *Cli) Connect() (*Cli, error) {
 	config.User = c.user
 	config.Auth = []ssh.AuthMethod{ssh.Password(c.password)}
 	config.HostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error { return nil }
-	client, err := ssh.Dial("tcp", c.addr, config)
+	client, err := ssh.Dial("tcp", c.host, config)
 	if nil != err {
 		return c, err
 	}
@@ -50,30 +49,15 @@ func (c Cli) Run(shell string) (string, error) {
 	return c.LastResult, err
 }
 
-func Server() Cli {
-	addr := os.Getenv("addr")
-	user := os.Getenv("user")
-	password := os.Getenv("password")
+func Server(host string, user string, password string) Cli {
+
 	cli := Cli{
-		addr: addr,
-		user: user,
-		password:password,
+		host:     host,
+		user:     user,
+		password: password,
 	}
 	c, _ := cli.Connect()
 
 	defer c.client.Close()
 	return cli
 }
-
-// func Server(addr string,user string, password string) Cli {
-
-// 	cli := Cli{
-// 		addr: addr,
-// 		user: user,
-// 		password:password,
-// 	}
-// 	c, _ := cli.Connect()
-
-// 	defer c.client.Close()
-// 	return cli
-// }

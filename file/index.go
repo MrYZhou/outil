@@ -1,6 +1,6 @@
 package file
 
-import(
+import (
 	"os"
 	"path"
 	"strings"
