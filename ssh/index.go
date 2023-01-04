@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	. "github.com/MrYZhou/outil/file"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
