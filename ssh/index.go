@@ -8,9 +8,9 @@ import (
 	"path"
 	"strings"
 
+	. "github.com/MrYZhou/outil/file"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
-	. "github.com/MrYZhou/outil/file"
 )
 
 // 连接信息
@@ -56,8 +56,8 @@ func (c Cli) Run(shell string) (string, error) {
 
 	r, err := session.StdoutPipe()
 	if err != nil {
-			fmt.Println(err)
-			os.Exit(1001)
+		fmt.Println(err)
+		os.Exit(1001)
 	}
 	go io.Copy(os.Stdout, r)
 
@@ -66,15 +66,17 @@ func (c Cli) Run(shell string) (string, error) {
 	return c.LastResult, err
 }
 
-func Server(host string, user string, password string) Cli {
+func Server(host string, user string, password string) *Cli {
 
 	cli := Cli{
 		host:     host,
 		user:     user,
 		password: password,
+		sftpClient: nil,
+		client:     nil,
 	}
-	cli.Connect()
-	return cli
+	c, _ := cli.Connect()
+	return c
 }
 
 // 创建目录
