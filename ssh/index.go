@@ -8,7 +8,6 @@ import (
 	"path"
 	"strings"
 
-	. "github.com/MrYZhou/outil/file"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -18,8 +17,8 @@ type Cli struct {
 	user       string
 	password   string
 	host       string
-	client     *ssh.Client
-	sftpClient *sftp.Client
+	Client     *ssh.Client
+	SftpClient *sftp.Client
 	LastResult string
 }
 
@@ -35,19 +34,19 @@ func (c *Cli) Connect() (*Cli, error) {
 	if nil != err {
 		return c, err
 	}
-	c.client = client
-	c.sftpClient = sftp
+	c.Client = client
+	c.SftpClient = sftp
 	return c, nil
 }
 
-// 执行shell
+// 执行shellclient
 func (c Cli) Run(shell string) (string, error) {
-	if c.client == nil {
+	if c.Client == nil {
 		if _, err := c.Connect(); err != nil {
 			return "", err
 		}
 	}
-	session, err := c.client.NewSession()
+	session, err := c.Client.NewSession()
 	if err != nil {
 		return "", err
 	}
@@ -56,8 +55,8 @@ func (c Cli) Run(shell string) (string, error) {
 
 	r, err := session.StdoutPipe()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1001)
+			fmt.Println(err)
+			os.Exit(1001)
 	}
 	go io.Copy(os.Stdout, r)
 
@@ -72,8 +71,6 @@ func Server(host string, user string, password string) *Cli {
 		host:     host,
 		user:     user,
 		password: password,
-		sftpClient: nil,
-		client:     nil,
 	}
 	c, _ := cli.Connect()
 	return c
@@ -81,7 +78,7 @@ func Server(host string, user string, password string) *Cli {
 
 // 创建目录
 func (c *Cli) createDir(dir string) {
-	c.sftpClient.MkdirAll(dir)
+	c.SftpClient.MkdirAll(dir)
 }
 
 // 批量创建目录
@@ -93,7 +90,7 @@ func (c *Cli) createDirList(list []string) {
 
 // 判断文件是否存在
 func (c *Cli) IsFileExist(path string) bool {
-	info, _ := c.sftpClient.Stat(path)
+	info, _ := c.SftpClient.Stat(path)
 	if info != nil {
 		return true
 	}
@@ -107,13 +104,13 @@ remoteFileName 文件名
 */
 func (c *Cli) CreateFile(remoteFileName string) (*sftp.File, error) {
 	remoteDir := path.Dir(remoteFileName)
-	c.sftpClient.MkdirAll(remoteDir)
-	ftpFile, err := c.sftpClient.Create(remoteFileName)
+	c.SftpClient.MkdirAll(remoteDir)
+	ftpFile, err := c.SftpClient.Create(remoteFileName)
 	return ftpFile, err
 }
 func initClient(c *Cli) *Cli {
 
-	if c.sftpClient == nil {
+	if c.SftpClient == nil {
 		cli, _ := c.Connect()
 		return cli
 	} else {
@@ -130,12 +127,12 @@ base 本地文件夹路径
 target 远程文件夹路径
 */
 func (c *Cli) UploadDir(base string, target string) {
-	c.sftpClient.MkdirAll(target)
+	c.SftpClient.MkdirAll(target)
 	list, dirList := ReadDirAll(base)
 	// 创建远程目录
 	for _, f := range dirList {
 		targetPath := strings.Replace(f, base, target, 1)
-		c.sftpClient.MkdirAll(targetPath)
+		c.SftpClient.MkdirAll(targetPath)
 	}
 	// 创建远程文件
 	for _, f := range list {
