@@ -20,11 +20,7 @@ func CopyDir(base string, target string) {
 	}
 }
 
-// 上传目录到服务器
-func UploadDir(base string, target string) bool {
-	// list := ReadDir(base)
-	return true
-}
+
 
 /*
 	复制文件
