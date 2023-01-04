@@ -158,7 +158,7 @@ func (c *Cli) UploadFile(localFile, remoteFileName string) {
 	}
 
 	fileByte, _ := io.ReadAll(file)
-	go ftpFile.Write(fileByte)
+	ftpFile.Write(fileByte)
 
 	defer ftpFile.Close()
 	defer file.Close()
