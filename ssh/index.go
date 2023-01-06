@@ -40,6 +40,17 @@ func (c *Cli) Connect() (*Cli, error) {
 	return c, nil
 }
 
+func Server(host string, user string, password string) *Cli {
+
+	cli := Cli{
+		host:     host,
+		user:     user,
+		password: password,
+	}
+	c, _ := cli.Connect()
+	return c
+}
+
 // 执行shellclient
 func (c Cli) Run(shell string) (string, error) {
 	if c.Client == nil {
@@ -66,15 +77,77 @@ func (c Cli) Run(shell string) (string, error) {
 	return c.LastResult, err
 }
 
-func Server(host string, user string, password string) *Cli {
+/*
+切片本地文件上传到远程
 
-	cli := Cli{
-		host:     host,
-		user:     user,
-		password: password,
+target 服务器的目录
+
+filePath 切片的文件路径
+
+num 切片数量
+*/
+func (c *Cli) SliceUpload(target string ,filePath string, num int) []string {
+	f, _ := os.Open(filePath)
+	fileInfo, _ := f.Stat()
+
+	defer f.Close()
+
+	size := fileInfo.Size() / int64(num)
+	duo := fileInfo.Size() - size*int64(num)
+	fileList := make([]string, 0)
+
+	var wg sync.WaitGroup
+	for i := 0; i < num; i++ {
+		wg.Add(1)
+		go func(i int) {
+
+			var chunk []byte
+			if i == num-1 {
+				chunk = make([]byte, size+duo)
+			} else {
+				chunk = make([]byte, size)
+			}
+
+			f.Read(chunk)
+
+			rand.Seed(time.Now().UnixNano())
+			uLen := 20
+			b := make([]byte, uLen)
+			rand.Read(b)
+
+			rand_str := hex.EncodeToString(b)[0:uLen]
+			
+			targetPath := path.Join(target, rand_str) 
+			fileList = append(fileList, targetPath)
+			ftpFile, _ := c.SftpClient.Create(targetPath)
+			ftpFile.Write([]byte(chunk))
+			wg.Done()
+		}(i)
 	}
-	c, _ := cli.Connect()
-	return c
+
+	wg.Wait()
+
+	defer c.Client.Close()
+	defer c.SftpClient.Close()
+
+	return fileList
+}
+
+/*
+合并远程文件
+
+文件列表
+
+文件合成名
+*/
+func (c *Cli) combineRemoteFile(fileList []string,target string) {
+	chunkTotal := make([]byte, 0)
+	for i, name := range fileList {
+		fmt.Println(i)
+		chunk, _ := os.ReadFile(name)
+		chunkTotal = append(chunkTotal, chunk...)
+	}
+	os.WriteFile(target, []byte(chunkTotal), os.ModePerm)
 }
 
 // 创建目录
