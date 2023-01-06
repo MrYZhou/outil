@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	. "github.com/MrYZhou/outil/common"
+	// . "o/common"
+
 	. "github.com/MrYZhou/outil/file"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -69,6 +71,7 @@ func (c Cli) Run(shell string) (string, error) {
 
 	r, err := session.StdoutPipe()
 	if err != nil {
+		fmt.Println(err)
 		os.Exit(1001)
 	}
 	go io.Copy(os.Stdout, r)
@@ -88,7 +91,10 @@ filePath 切片的文件路径
 num 切片数量
 */
 func (c *Cli) SliceUpload(target string, filePath string, num int) []string {
-
+	if num < 2 {
+		fmt.Println("切片数量至少为2")
+		return nil
+	}
 	c.createDir(target)
 
 	f, err := os.Open(filePath)
@@ -104,30 +110,41 @@ func (c *Cli) SliceUpload(target string, filePath string, num int) []string {
 	duo := fileInfo.Size() - size*int64(num)
 	fileList := make([]string, 0)
 
-	var wg sync.WaitGroup
+	var offset int64
+	var offsetList []int64
+	var chunkSizeList []int64
+
 	for i := 0; i < num; i++ {
-		wg.Add(1)
-		go func(i int) {
+		if i == num-1 {
+			size = size + duo
+		}
+		// 记录offset,和每一块的文件大小
+		offsetList = append(offsetList, offset)
+		chunkSizeList = append(chunkSizeList, size)
+		offset += size
 
-			var chunk []byte
-			if i == num-1 {
-				chunk = make([]byte, size+duo)
-			} else {
-				chunk = make([]byte, size)
-			}
-
-			f.Read(chunk)
-
-			rand_str := Random(10)
-
-			targetPath := path.Join(target, "chunk"+rand_str)
-			fileList = append(fileList, targetPath)
-			ftpFile, _ := c.SftpClient.Create(targetPath)
-			ftpFile.Write([]byte(chunk))
-			wg.Done()
-		}(i)
+		rand_str := RandStr(10)
+		targetPath := path.Join(target, "chunk"+rand_str)
+		fileList = append(fileList, targetPath)
 	}
+	fmt.Println("======文件列表======")
+	fmt.Println(fileList)
+	// 批量写入
+	var wg sync.WaitGroup
+	for i, targetPath := range fileList {
+		wg.Add(1)
+		go func(i int, targetPath string, f *os.File) {
+			ftpFile, _ := c.SftpClient.Create(targetPath)
+			size := chunkSizeList[i]
+			offset := offsetList[i]
+			chunk := make([]byte, size)
 
+			f.ReadAt(chunk, offset)
+			ftpFile.Write([]byte(chunk))
+
+			wg.Done()
+		}(i, targetPath, f)
+	}
 	wg.Wait()
 
 	return fileList

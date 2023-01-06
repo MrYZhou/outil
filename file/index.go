@@ -1,12 +1,11 @@
 package file
 
 import (
+	. "github.com/MrYZhou/outil/common"
 	"os"
 	"path"
 	"strings"
 	"sync"
-
-	. "github.com/MrYZhou/outil/common"
 )
 
 /*
@@ -60,7 +59,7 @@ func SliceFile(out string, filePath string, num int) []string {
 			// 从源文件读取chunk大小的数据
 			f.Read(chunk)
 
-			rand_str := Random(10)
+			rand_str := RandStr(10)
 
 			targetPath := path.Join(out, "chunk"+rand_str)
 			fileList = append(fileList, targetPath)
@@ -92,7 +91,7 @@ func CopyDir(base string, target string) {
 /*
 	复制文件
 
-source 源文件路径, 
+source 源文件路径,
 
 target 目标文件路径
 
