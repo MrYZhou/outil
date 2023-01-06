@@ -4,7 +4,11 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
+
+	. "github.com/MrYZhou/outil/common"
 )
+
 /*
 合并文件
 
@@ -14,8 +18,7 @@ import (
 */
 func combineFile(fileList []string,target string) {
 	chunkTotal := make([]byte, 0)
-	for i, name := range fileList {
-		fmt.Println(i)
+	for _, name := range fileList {
 		chunk, _ := os.ReadFile(name)
 		chunkTotal = append(chunkTotal, chunk...)
 	}
@@ -31,9 +34,11 @@ filePath 切片的文件路径
 num 切片数量
 */
 func SliceFile(out string,filePath string, num int,) []string {
+	
+	os.MkdirAll(out, os.ModePerm)
+
 	f, _ := os.Open(filePath)
 	fileInfo, _ := f.Stat()
-
 	defer f.Close()
 
 	size := fileInfo.Size() / int64(num)
@@ -53,13 +58,10 @@ func SliceFile(out string,filePath string, num int,) []string {
 			}
 			// 从源文件读取chunk大小的数据
 			f.Read(chunk)
-			rand.Seed(time.Now().UnixNano())
-			uLen := 20
-			b := make([]byte, uLen)
-			rand.Read(b)
-			rand_str := hex.EncodeToString(b)[0:uLen]
+			
+			rand_str := Random(10)	
 
-			targetPath := path.Join(out, rand_str)
+			targetPath := path.Join(out,"chunk"+ rand_str)
 			fileList = append(fileList, targetPath)
 
 			os.WriteFile(targetPath, []byte(chunk), os.ModePerm)

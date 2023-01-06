@@ -7,6 +7,9 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
+
+	. "github.com/MrYZhou/outil/common"
 
 	. "github.com/MrYZhou/outil/file"
 	"github.com/pkg/sftp"
@@ -67,8 +70,8 @@ func (c Cli) Run(shell string) (string, error) {
 
 	r, err := session.StdoutPipe()
 	if err != nil {
-			fmt.Println(err)
-			os.Exit(1001)
+		fmt.Println(err)
+		os.Exit(1001)
 	}
 	go io.Copy(os.Stdout, r)
 
@@ -86,8 +89,15 @@ filePath 切片的文件路径
 
 num 切片数量
 */
-func (c *Cli) SliceUpload(target string ,filePath string, num int) []string {
-	f, _ := os.Open(filePath)
+func (c *Cli) SliceUpload(target string, filePath string, num int) []string {
+
+	c.createDir(target)
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("文件不存在")
+		return nil
+	}
 	fileInfo, _ := f.Stat()
 
 	defer f.Close()
@@ -110,14 +120,9 @@ func (c *Cli) SliceUpload(target string ,filePath string, num int) []string {
 
 			f.Read(chunk)
 
-			rand.Seed(time.Now().UnixNano())
-			uLen := 20
-			b := make([]byte, uLen)
-			rand.Read(b)
+			rand_str := Random(10)
 
-			rand_str := hex.EncodeToString(b)[0:uLen]
-			
-			targetPath := path.Join(target, rand_str) 
+			targetPath := path.Join(target, "chunk"+rand_str)
 			fileList = append(fileList, targetPath)
 			ftpFile, _ := c.SftpClient.Create(targetPath)
 			ftpFile.Write([]byte(chunk))
@@ -136,39 +141,33 @@ func (c *Cli) SliceUpload(target string ,filePath string, num int) []string {
 /*
 合并远程文件
 
-文件列表
+fileList 文件列表
 
-文件合成名
+target 文件合成路径
 */
-func (c *Cli) combineRemoteFile(fileList []string,target string) {
+func (c *Cli) CombineRemoteFile(fileList []string, target string) {
+
 	chunkTotal := make([]byte, 0)
+	// file,_ := c.SftpClient.Create(target)
+	// fileTemp,_:=c.SftpClient.Create(target)
+	// reader:=bufio.NewReader(file)
+	// writer:=bufio.NewWriter(file)
+
 	for i, name := range fileList {
 		fmt.Println(i)
-		chunk, _ := os.ReadFile(name)
-		chunkTotal = append(chunkTotal, chunk...)
-	}
-	os.WriteFile(target, []byte(chunkTotal), os.ModePerm)
-}
+		ftpBase, _ := c.SftpClient.Open(name)
+		defer ftpBase.Close()
+		
+		fileInfo, _ := ftpBase.Stat()
+		size := fileInfo.Size()
+		buffer := make([]byte, size)
+		ftpBase.Read(buffer)
+		chunkTotal = append(chunkTotal, buffer...)
+		
 
-// 创建目录
-func (c *Cli) createDir(dir string) {
-	c.SftpClient.MkdirAll(dir)
-}
-
-// 批量创建目录
-func (c *Cli) createDirList(list []string) {
-	for _, dir := range list {
-		c.createDir(dir)
 	}
-}
-
-// 判断文件是否存在
-func (c *Cli) IsFileExist(path string) bool {
-	info, _ := c.SftpClient.Stat(path)
-	if info != nil {
-		return true
-	}
-	return false
+	ftpFile, _ := c.CreateFile(target)
+	ftpFile.Write([]byte(chunkTotal))
 }
 
 /*
@@ -191,6 +190,27 @@ func initClient(c *Cli) *Cli {
 		return c
 	}
 
+}
+
+// 创建目录
+func (c *Cli) createDir(dir string) {
+	c.SftpClient.MkdirAll(dir)
+}
+
+// 批量创建目录
+func (c *Cli) createDirList(list []string) {
+	for _, dir := range list {
+		c.createDir(dir)
+	}
+}
+
+// 判断文件是否存在
+func (c *Cli) IsFileExist(path string) bool {
+	info, _ := c.SftpClient.Stat(path)
+	if info != nil {
+		return true
+	}
+	return false
 }
 
 /*
