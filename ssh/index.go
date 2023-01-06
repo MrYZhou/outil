@@ -132,10 +132,25 @@ func (c *Cli) SliceUpload(target string, filePath string, num int) []string {
 
 	wg.Wait()
 
+	return fileList
+}
+
+/*
+关闭文件
+*/
+func (c *Cli) Close() {
 	defer c.Client.Close()
 	defer c.SftpClient.Close()
-
-	return fileList
+}
+/*
+合并远程文件
+*/
+func (c *Cli) ConcatRemoteFile(fileList []string, target string) {
+	command := "cat "
+	command += strings.Join(fileList, " ")
+	command += " > "
+	command += target
+	c.Run(command)
 }
 
 /*
@@ -147,27 +162,41 @@ target 文件合成路径
 */
 func (c *Cli) CombineRemoteFile(fileList []string, target string) {
 
-	chunkTotal := make([]byte, 0)
-	// file,_ := c.SftpClient.Create(target)
-	// fileTemp,_:=c.SftpClient.Create(target)
-	// reader:=bufio.NewReader(file)
-	// writer:=bufio.NewWriter(file)
-
-	for i, name := range fileList {
-		fmt.Println(i)
+	ftpFile, _ := c.CreateFile(target)
+	defer ftpFile.Close()
+	chunkList := make([][]byte, 0)
+	sizeList := make([]int64, 0)
+	var offset int64
+	for _, name := range fileList {
 		ftpBase, _ := c.SftpClient.Open(name)
 		defer ftpBase.Close()
-		
+
 		fileInfo, _ := ftpBase.Stat()
 		size := fileInfo.Size()
 		buffer := make([]byte, size)
 		ftpBase.Read(buffer)
-		chunkTotal = append(chunkTotal, buffer...)
-		
+
+		chunkList = append(chunkList, buffer)
+		sizeList = append(sizeList, offset)
+		offset += size
 
 	}
-	ftpFile, _ := c.CreateFile(target)
-	ftpFile.Write([]byte(chunkTotal))
+	// 初始化文件大小
+	alloc := make([]byte, offset)
+	ftpFile.Write(alloc)
+	// 并行写入
+	var wg sync.WaitGroup
+	for i, chunk := range chunkList {
+		go wg.Add(1)
+		func(i int) {
+			offset := sizeList[i]
+			ftpFile.WriteAt(chunk, offset)
+			wg.Done()
+		}(i)
+
+	}
+	wg.Wait()
+
 }
 
 /*
