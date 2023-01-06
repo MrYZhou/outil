@@ -12,11 +12,11 @@ import (
 /*
 合并文件
 
-文件列表
+fileList 文件列表
 
-文件输出路径
+target 文件输出路径
 */
-func combineFile(fileList []string, target string) {
+func CombineFile(fileList []string, target string) {
 	chunkTotal := make([]byte, 0)
 	for _, name := range fileList {
 		chunk, _ := os.ReadFile(name)
@@ -77,7 +77,8 @@ func SliceFile(out string, filePath string, num int) []string {
 /*
 复制文件夹
 
-base代表源目录,target代表目标目录
+base 代表源目录
+target 代表目标目录
 */
 func CopyDir(base string, target string) {
 	os.MkdirAll(target, os.ModePerm)
@@ -91,7 +92,9 @@ func CopyDir(base string, target string) {
 /*
 	复制文件
 
-source 源文件路径, target 目标文件路径
+source 源文件路径, 
+
+target 目标文件路径
 
 注意中间的目录会自动创建,无需关心
 */
@@ -105,7 +108,7 @@ func TransFile(source string, target string) error {
 /*
 读取文件夹
 
-参数base是文件夹的路径
+base 文件夹的路径
 
 返回值是文件夹下所有的文件列表
 */
@@ -118,7 +121,7 @@ func ReadDir(base string) []string {
 /*
 读取文件夹
 
-参数base是文件夹的路径
+base 文件夹的路径
 
 第一个返回值是文件夹下所有的文件列表
 
@@ -133,6 +136,9 @@ func ReadDirAll(base string) ([]string, []string) {
 
 /*
 递归遍历文件夹
+base 文件夹的路径
+list 文件列表
+dirList 文件夹列表
 */
 func ReadDirDeep(base string, list *[]string, dirList *[]string) {
 	fileList, _ := os.ReadDir(base)
