@@ -5,7 +5,71 @@ import (
 	"path"
 	"strings"
 )
+/*
+合并文件
 
+文件列表
+
+文件输出路径
+*/
+func combineFile(fileList []string,target string) {
+	chunkTotal := make([]byte, 0)
+	for i, name := range fileList {
+		fmt.Println(i)
+		chunk, _ := os.ReadFile(name)
+		chunkTotal = append(chunkTotal, chunk...)
+	}
+	os.WriteFile(target, []byte(chunkTotal), os.ModePerm)
+}
+/*
+把一个文件切片成多个文件
+
+out 切片输出的目录
+
+filePath 切片的文件路径
+
+num 切片数量
+*/
+func SliceFile(out string,filePath string, num int,) []string {
+	f, _ := os.Open(filePath)
+	fileInfo, _ := f.Stat()
+
+	defer f.Close()
+
+	size := fileInfo.Size() / int64(num)
+	duo := fileInfo.Size() - size*int64(num)
+	fileList := make([]string, 0)
+
+	var wg sync.WaitGroup
+	for i := 0; i < num; i++ {
+		wg.Add(1)
+		go func(i int) {
+
+			var chunk []byte
+			if i == num-1 {
+				chunk = make([]byte, size+duo)
+			} else {
+				chunk = make([]byte, size)
+			}
+			// 从源文件读取chunk大小的数据
+			f.Read(chunk)
+			rand.Seed(time.Now().UnixNano())
+			uLen := 20
+			b := make([]byte, uLen)
+			rand.Read(b)
+			rand_str := hex.EncodeToString(b)[0:uLen]
+
+			targetPath := path.Join(out, rand_str)
+			fileList = append(fileList, targetPath)
+
+			os.WriteFile(targetPath, []byte(chunk), os.ModePerm)
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
+	return fileList
+}
 /*
 复制文件夹
 
