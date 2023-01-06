@@ -16,7 +16,7 @@ import (
 
 文件输出路径
 */
-func combineFile(fileList []string,target string) {
+func combineFile(fileList []string, target string) {
 	chunkTotal := make([]byte, 0)
 	for _, name := range fileList {
 		chunk, _ := os.ReadFile(name)
@@ -24,6 +24,7 @@ func combineFile(fileList []string,target string) {
 	}
 	os.WriteFile(target, []byte(chunkTotal), os.ModePerm)
 }
+
 /*
 把一个文件切片成多个文件
 
@@ -33,8 +34,8 @@ filePath 切片的文件路径
 
 num 切片数量
 */
-func SliceFile(out string,filePath string, num int,) []string {
-	
+func SliceFile(out string, filePath string, num int) []string {
+
 	os.MkdirAll(out, os.ModePerm)
 
 	f, _ := os.Open(filePath)
@@ -58,10 +59,10 @@ func SliceFile(out string,filePath string, num int,) []string {
 			}
 			// 从源文件读取chunk大小的数据
 			f.Read(chunk)
-			
-			rand_str := Random(10)	
 
-			targetPath := path.Join(out,"chunk"+ rand_str)
+			rand_str := Random(10)
+
+			targetPath := path.Join(out, "chunk"+rand_str)
 			fileList = append(fileList, targetPath)
 
 			os.WriteFile(targetPath, []byte(chunk), os.ModePerm)
@@ -72,6 +73,7 @@ func SliceFile(out string,filePath string, num int,) []string {
 	wg.Wait()
 	return fileList
 }
+
 /*
 复制文件夹
 
@@ -85,8 +87,6 @@ func CopyDir(base string, target string) {
 		TransFile(f, targetPath)
 	}
 }
-
-
 
 /*
 	复制文件

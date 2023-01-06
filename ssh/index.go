@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	. "github.com/MrYZhou/outil/common"
-
 	. "github.com/MrYZhou/outil/file"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -70,7 +69,6 @@ func (c Cli) Run(shell string) (string, error) {
 
 	r, err := session.StdoutPipe()
 	if err != nil {
-		fmt.Println(err)
 		os.Exit(1001)
 	}
 	go io.Copy(os.Stdout, r)
@@ -142,6 +140,7 @@ func (c *Cli) Close() {
 	defer c.Client.Close()
 	defer c.SftpClient.Close()
 }
+
 /*
 合并远程文件
 */
