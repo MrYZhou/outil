@@ -20,6 +20,7 @@ func CombineFile(fileList []string, target string) {
 	for _, name := range fileList {
 		chunk, _ := os.ReadFile(name)
 		chunkTotal = append(chunkTotal, chunk...)
+		os.Remove(name)
 	}
 	os.WriteFile(target, []byte(chunkTotal), os.ModePerm)
 }
