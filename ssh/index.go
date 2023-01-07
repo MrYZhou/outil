@@ -10,8 +10,6 @@ import (
 	"sync"
 
 	. "github.com/MrYZhou/outil/common"
-	// . "o/common"
-
 	. "github.com/MrYZhou/outil/file"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -274,10 +272,16 @@ func (c *Cli) UploadDir(base string, target string) {
 		c.SftpClient.MkdirAll(targetPath)
 	}
 	// 创建远程文件
-	for _, f := range list {
+	var wg sync.WaitGroup
+	for i, f := range list {
 		targetPath := strings.Replace(f, base, target, 1)
-		c.UploadFile(f, targetPath)
+		wg.Add(1)
+		go func(i int,f string,targetPath string) {
+			c.UploadFile(f, targetPath)
+			wg.Done()
+		}(i,f,targetPath)
 	}
+	wg.Wait()
 }
 
 /*
