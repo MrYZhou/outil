@@ -78,7 +78,21 @@ func (c Cli) Run(shell string) (string, error) {
 	c.LastResult = string(buf)
 	return c.LastResult, err
 }
-
+// 不需要输出信息
+func (c Cli) RunQuiet(shell string) error{
+	if c.Client == nil {
+		if _, err := c.Connect(); err != nil {
+			return  err
+		}
+	}
+	session, err := c.Client.NewSession()
+	if err != nil {
+		return  err
+	}
+	// 关闭会话
+	defer session.Close()
+	return nil
+}
 /*
 切片本地文件上传到远程
 
