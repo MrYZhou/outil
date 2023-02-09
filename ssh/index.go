@@ -139,8 +139,6 @@ func (c *Cli) SliceUpload(target string, filePath string, num int) []string {
 		targetPath := path.Join(target, "chunk"+rand_str)
 		fileList = append(fileList, targetPath)
 	}
-	fmt.Println("======文件列表======")
-	fmt.Println(fileList)
 	// 批量写入
 	var wg sync.WaitGroup
 	for i, targetPath := range fileList {
