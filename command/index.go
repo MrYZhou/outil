@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"fmt"
 )
 
 /*
@@ -22,6 +23,14 @@ func Run(content string, direct string) {
 	cmd.Stdout = os.Stdout
 	// 将命令的错误输出重定向到os.Stderr
 	cmd.Stderr = os.Stderr
-	// 执行命令,实时输出
-	cmd.Start()
+
+	// 执行命令，并等待命令完成
+	if err := cmd.Start(); err != nil {
+		fmt.Println("Failed to start command: ", err)
+		return
+	}
+	if err := cmd.Wait(); err != nil {
+		fmt.Println("Command failed: ", err)
+		return
+	}
 }
