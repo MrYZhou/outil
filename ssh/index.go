@@ -42,15 +42,15 @@ func (c *Cli) Connect() (*Cli, error) {
 	return c, nil
 }
 
-func Server(host string, user string, password string) *Cli {
+func Server(host string, user string, password string) (*Cli ,error){
 
 	cli := Cli{
 		host:     host,
 		user:     user,
 		password: password,
 	}
-	c, _ := cli.Connect()
-	return c
+	c, err := cli.Connect()
+	return c,err
 }
 
 // 执行shellclient
