@@ -17,12 +17,13 @@ import (
 
 // 连接信息
 type Cli struct {
-	user       string
-	password   string
-	host       string
-	Client     *ssh.Client
-	SftpClient *sftp.Client
-	LastResult string
+	host       string // 主机地址
+	user       string // 登录用户
+	password   string // 密码
+	Client     *ssh.Client // bash操作
+	SftpClient *sftp.Client // 文件操作
+	LastResult string // 执行的最后一次结果
+	PrivateKey string // 私钥字符串
 }
 
 // 连接对象
@@ -42,6 +43,11 @@ func (c *Cli) Connect() (*Cli, error) {
 	return c, nil
 }
 
+/*
+获取服务器操作对象,简单版本。
+
+如果需要通过密钥连接,请使用 ConnectServer
+*/
 func Server(host string, user string, password string) (*Cli ,error){
 
 	cli := Cli{
@@ -49,6 +55,11 @@ func Server(host string, user string, password string) (*Cli ,error){
 		user:     user,
 		password: password,
 	}
+	c, err := cli.Connect()
+	return c,err
+}
+// 获取服务器操作对象
+func ConnectServer(cli Cli) (*Cli ,error){
 	c, err := cli.Connect()
 	return c,err
 }
