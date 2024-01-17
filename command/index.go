@@ -1,10 +1,10 @@
 package command
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
-	"fmt"
 )
 
 /*
@@ -12,7 +12,7 @@ import (
 
 第一个参数是执行的目录,第二个参数是命令
 */
-func Run(content string, direct string) {
+func Run(content string, direct string) error{
 	// 将direct按空格分割为参数列表
 	param := strings.Split(direct, " ")
 	// 创建一个执行命令的命令对象cmd，并设置要执行的命令和参数
@@ -27,10 +27,11 @@ func Run(content string, direct string) {
 	// 执行命令，并等待命令完成
 	if err := cmd.Start(); err != nil {
 		fmt.Println("Failed to start command: ", err)
-		return
+		return err
 	}
 	if err := cmd.Wait(); err != nil {
 		fmt.Println("Command failed: ", err)
-		return
+		return err
 	}
+	return nil
 }
