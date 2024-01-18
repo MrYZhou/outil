@@ -17,9 +17,9 @@ import (
 
 // 连接信息
 type Cli struct {
-	host       string // 主机地址
-	user       string // 登录用户
-	password   string // 密码
+	Host       string // 主机地址
+	User       string // 登录用户
+	Password   string // 密码
 	Client     *ssh.Client // bash操作
 	SftpClient *sftp.Client // 文件操作
 	LastResult string // 执行的最后一次结果
