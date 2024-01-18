@@ -9,7 +9,6 @@ import (
 
 	. "github.com/MrYZhou/outil/command"
 	. "github.com/MrYZhou/outil/ssh"
-	"golang.org/x/crypto/ssh"
 )
 func TestRun(t *testing.T) {
 	Run(".","docker stats")
@@ -24,23 +23,13 @@ func TestConnectWithKey(t *testing.T) {
 		return
 	}
 
-	// 解析私钥
-	signer, err := ssh.ParsePrivateKey(contentBytes)
-	if err != nil {
-		log.Fatal("Failed to parse private key: ", err)
-	}
+	var cli Cli
+	cli.Host =  "47.120.11.197:22"
+	cli.User = "root"
+	cli.PrivateKey = contentBytes
+	con, err := ConnectServer(cli)
+	client := con.Client
 
-	// 设置客户端请求参数
-	config := &ssh.ClientConfig{
-		User: "root",
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // 在生产环境中请替换为安全的主机密钥验证方法
-	}
-
-	// 作为客户端连接SSH服务器
-	client, err := ssh.Dial("tcp", "47.120.11.197:22", config)
 	if err != nil {
 		log.Fatal("Failed to dial: ", err)
 	}
@@ -59,18 +48,14 @@ func TestConnectWithKey(t *testing.T) {
 	if err := session.Run("cat /proc/cpuinfo"); err != nil {
 		log.Fatal("Failed to run: " + err.Error())
 	}
-
 	fmt.Println(b.String())
 }
 
 func TestServer(t *testing.T){
 	var cli Cli
-	var host = "192.168.0.62:22"
-	var user = "root"
-	var password = "YH4WfLbGPasRLVhs"
-	cli.Host =  host
-	cli.User = user
-	cli.Password = password
+	cli.Host =  "192.168.0.62:22"
+	cli.User = "root"
+	cli.Password = "YH4WfLbGPasRLVhs"
 	con, err := ConnectServer(cli)
 	fmt.Println(con, err)
 }
