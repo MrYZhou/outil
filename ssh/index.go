@@ -30,10 +30,10 @@ type Cli struct {
 func (c *Cli) Connect() (*Cli, error) {
 	config := &ssh.ClientConfig{}
 	config.SetDefaults()
-	config.User = c.user
-	config.Auth = []ssh.AuthMethod{ssh.Password(c.password)}
+	config.User = c.User
+	config.Auth = []ssh.AuthMethod{ssh.Password(c.Password)}
 	config.HostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error { return nil }
-	client, err := ssh.Dial("tcp", c.host, config)
+	client, err := ssh.Dial("tcp", c.Host, config)
 	sftp, err := sftp.NewClient(client)
 	if nil != err {
 		return c, err
@@ -51,9 +51,9 @@ func (c *Cli) Connect() (*Cli, error) {
 func Server(host string, user string, password string) (*Cli ,error){
 
 	cli := Cli{
-		host:     host,
-		user:     user,
-		password: password,
+		Host:     host,
+		User:     user,
+		Password: password,
 	}
 	c, err := cli.Connect()
 	return c,err
