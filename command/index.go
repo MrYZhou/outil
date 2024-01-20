@@ -92,7 +92,7 @@ func RunWithValidated(content string, direct string, validate string) error {
 	
 	// 命令执行不正常
 	if len(errBytes) > 0 {
-		return fmt.Errorf("错误信息:'%s'",errBytes)
+		return fmt.Errorf("error info:'%s'",errBytes)
 	}
 
 	// 命令正常执行完成,在检查输出结果是否包含校验字符
