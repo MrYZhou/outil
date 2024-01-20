@@ -11,20 +11,21 @@ import (
 
 	. "github.com/MrYZhou/outil/common"
 	. "github.com/MrYZhou/outil/file"
+	"github.com/gosuri/uiprogress"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
 // 连接信息
 type Cli struct {
-	Host       string // 主机地址
-	User       string // 登录用户
-	Password   string // 密码
-	Client     *ssh.Client // bash操作
+	Host       string       // 主机地址
+	User       string       // 登录用户
+	Password   string       // 密码
+	Client     *ssh.Client  // bash操作
 	SftpClient *sftp.Client // 文件操作
-	LastResult string // 执行的最后一次结果
-	PrivateKey []byte // 私钥串
-	PublicKey []byte // 远程服务器的公钥串,如果有传则校验,可以不传
+	LastResult string       // 执行的最后一次结果
+	PrivateKey []byte       // 私钥串
+	PublicKey  []byte       // 远程服务器的公钥串,如果有传则校验,可以不传
 }
 
 // 连接对象
@@ -41,7 +42,7 @@ func (c *Cli) Connect() (*Cli, error) {
 			log.Fatal("Failed to parse private key: ", err)
 		}
 		config.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
-	}	else{
+	} else {
 		config.Auth = []ssh.AuthMethod{ssh.Password(c.Password)}
 	}
 
@@ -52,10 +53,10 @@ func (c *Cli) Connect() (*Cli, error) {
 		if err != nil {
 			log.Fatal("Failed to parse private key: ", err)
 		}
-		config.HostKeyCallback = ssh.FixedHostKey(signer) 
-	}else{
+		config.HostKeyCallback = ssh.FixedHostKey(signer)
+	} else {
 		// 没有给公钥,使用ssh默认的一个不校验实现
-		config.HostKeyCallback = ssh.InsecureIgnoreHostKey() 
+		config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 	}
 
 	// 客户端连接SSH服务器
@@ -74,7 +75,7 @@ func (c *Cli) Connect() (*Cli, error) {
 
 如果需要通过密钥连接,请使用 ConnectServer
 */
-func Server(host string, user string, password string) (*Cli ,error){
+func Server(host string, user string, password string) (*Cli, error) {
 
 	cli := Cli{
 		Host:     host,
@@ -82,12 +83,13 @@ func Server(host string, user string, password string) (*Cli ,error){
 		Password: password,
 	}
 	c, err := cli.Connect()
-	return c,err
+	return c, err
 }
+
 // 获取服务器操作对象
-func ConnectServer(cli Cli) (*Cli ,error){
+func ConnectServer(cli Cli) (*Cli, error) {
 	c, err := cli.Connect()
-	return c,err
+	return c, err
 }
 
 // 执行shellclient
@@ -115,21 +117,23 @@ func (c Cli) Run(shell string) (string, error) {
 	c.LastResult = string(buf)
 	return c.LastResult, err
 }
+
 // 不需要输出信息
-func (c Cli) RunQuiet(shell string) error{
+func (c Cli) RunQuiet(shell string) error {
 	if c.Client == nil {
 		if _, err := c.Connect(); err != nil {
-			return  err
+			return err
 		}
 	}
 	session, err := c.Client.NewSession()
 	if err != nil {
-		return  err
+		return err
 	}
 	// 关闭会话
 	defer session.Close()
 	return nil
 }
+
 /*
 切片本地文件上传到远程
 
@@ -193,6 +197,101 @@ func (c *Cli) SliceUpload(target string, filePath string, num int) []string {
 		}(i, targetPath, f)
 	}
 	wg.Wait()
+
+	return fileList
+}
+
+/*
+切片本地文件上传到远程,同时输出进度
+
+target 服务器的目录
+
+filePath 切片的文件路径
+
+num 切片数量
+*/
+func (c *Cli) SliceUploadWithProgress(target string, filePath string, num int) []string {
+	if num < 2 {
+		fmt.Println("切片数量至少为2")
+		return nil
+	}
+	c.createDir(target)
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("文件不存在")
+		return nil
+	}
+	defer f.Close()
+
+	fileInfo, _ := f.Stat()
+	size := fileInfo.Size()
+	duo := size - int64(num)*size/int64(num)
+	chunkSize := size / int64(num)
+	if duo > 0 {
+		chunkSize += duo
+	}
+
+	fileList := make([]string, 0)
+	offsetList := make([]int64, 0)
+	chunkSizeList := make([]int64, num)
+
+	for i := 0; i < num; i++ {
+		if i == num-1 && duo > 0 {
+			chunkSize = chunkSize + duo
+		}
+		offsetList = append(offsetList, int64(i) * chunkSize)
+		chunkSizeList = append(chunkSizeList, chunkSize)
+		rand_str := RandStr(10)
+		targetPath := path.Join(target, "chunk"+rand_str)
+		fileList = append(fileList, targetPath)
+	}
+
+	var wg sync.WaitGroup
+	progress := uiprogress.New()
+	bar := progress.AddBar(int(size)).AppendCompleted().PrependElapsed()
+	progress.Start()
+
+	uploadSizesCh := make(chan int64) // 创建一个用于传输已上传大小的通道
+
+	for i, targetPath := range fileList {
+		wg.Add(1)
+		go func(i int, targetPath string, f *os.File, chunkSize int64) {
+			ftpFile, _ := c.SftpClient.Create(targetPath)
+
+			chunk := make([]byte, chunkSize)
+			n, err := f.ReadAt(chunk, offsetList[i])
+			if err != nil && err != io.EOF {
+				fmt.Println("读取文件错误:", err)
+				return
+			}
+
+			_, writeErr := ftpFile.Write(chunk[:n])
+			if writeErr != nil {
+				fmt.Println("上传文件片段错误:", writeErr)
+				return
+			}
+
+			// 发送已上传的字节数量到通道
+			uploadSizesCh <- int64(n)
+
+			wg.Done()
+		}(i, targetPath, f, chunkSizeList[i])
+	}
+
+	go func() {
+		totalUploaded := int64(0)
+		for range fileList {
+			n := <-uploadSizesCh
+			totalUploaded += n
+			bar.Set(int(totalUploaded))
+		}
+	}()
+
+	wg.Wait()
+
+	close(uploadSizesCh)
+	progress.Stop()
 
 	return fileList
 }
@@ -325,10 +424,10 @@ func (c *Cli) UploadDir(base string, target string) {
 	for i, f := range list {
 		targetPath := strings.Replace(f, base, target, 1)
 		wg.Add(1)
-		go func(i int,f string,targetPath string) {
+		go func(i int, f string, targetPath string) {
 			c.UploadFile(f, targetPath)
 			wg.Done()
-		}(i,f,targetPath)
+		}(i, f, targetPath)
 	}
 	wg.Wait()
 }
