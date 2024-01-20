@@ -3,7 +3,7 @@ package ssh
 import (
 	"fmt"
 	"io"
-	"net"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -23,7 +23,8 @@ type Cli struct {
 	Client     *ssh.Client // bash操作
 	SftpClient *sftp.Client // 文件操作
 	LastResult string // 执行的最后一次结果
-	PrivateKey string // 私钥字符串
+	PrivateKey []byte // 私钥串
+	PublicKey []byte // 远程服务器的公钥串,如果有传则校验,可以不传
 }
 
 // 连接对象
@@ -31,8 +32,33 @@ func (c *Cli) Connect() (*Cli, error) {
 	config := &ssh.ClientConfig{}
 	config.SetDefaults()
 	config.User = c.User
-	config.Auth = []ssh.AuthMethod{ssh.Password(c.Password)}
-	config.HostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error { return nil }
+
+	// 如果有私钥，按私钥连接,否则按密码
+	if len(c.PrivateKey) > 0 {
+		// 解析私钥
+		signer, err := ssh.ParsePrivateKey(c.PrivateKey)
+		if err != nil {
+			log.Fatal("Failed to parse private key: ", err)
+		}
+		config.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
+	}	else{
+		config.Auth = []ssh.AuthMethod{ssh.Password(c.Password)}
+	}
+
+	// 服务器公钥校验
+	if len(c.PublicKey) > 0 {
+		// 解析服务器公钥
+		signer, err := ssh.ParsePublicKey(c.PublicKey)
+		if err != nil {
+			log.Fatal("Failed to parse private key: ", err)
+		}
+		config.HostKeyCallback = ssh.FixedHostKey(signer) 
+	}else{
+		// 没有给公钥,使用ssh默认的一个不校验实现
+		config.HostKeyCallback = ssh.InsecureIgnoreHostKey() 
+	}
+
+	// 客户端连接SSH服务器
 	client, err := ssh.Dial("tcp", c.Host, config)
 	sftp, err := sftp.NewClient(client)
 	if nil != err {
